@@ -1,0 +1,4 @@
+﻿Primer_pair_#	Forward_primer_Sequence_(5'->3')	Forward_primer_Template_strand	Forward_primer_Length	Forward_primer_Start	Forward_primer_Stop	Forward_primer_Tm	Forward_primer_GC%	Forward_primer_Self_complementarity	Forward_primer_Self_3'_complementarity	Reverse_primer_Sequence_(5'->3')	Reverse_primer_Template_strand	Reverse_primer_Length	Reverse_primer_Start	Reverse_primer_Stop	Reverse_primer_Tm	Reverse_primer_GC%	Reverse_primer_Self_complementarity	Reverse_primer_Self_3'_complementarity	Product_length	
+1	TGGCAATTGCACAAATGTCCTC	Plus	22	1422	1443	60.29	45.45	8.00	2.00	CAGAGGGTGATGGTGTGGAAA	Minus	21	1522	1502	59.93	52.38	2.00	0.00	101	
+2	CATGGCAATTGCACAAATGTCCTCT	Plus	25	1420	1444	62.81	44.00	8.00	3.00	TTTCCATGACAGCTGCCCAGA	Minus	21	1539	1519	62.01	52.38	6.00	2.00	120	
+

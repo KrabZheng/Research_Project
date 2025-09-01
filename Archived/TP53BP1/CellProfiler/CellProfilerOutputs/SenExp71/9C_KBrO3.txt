@@ -1,0 +1,5 @@
+Count_Children_Puncta_Count	Count_Nuclei	Count_Nuclei_555pos	Count_Nuclei_withDots	Count_Puncta	Count_Toobright_all	ImageNumber	Metadata_Conc	Metadata_Sample
+7256.0	4628.0	3891.0	3117.0	7256.0	0.0	1	0.2K	9C
+2153.0	4179.0	3251.0	1272.0	2153.0	0.0	2	0K	9C
+14086.0	4354.0	3882.0	3455.0	14086.0	1.0	3	1K	9C
+12970.0	4840.0	3625.0	2460.0	12970.0	6.0	4	5K	9C

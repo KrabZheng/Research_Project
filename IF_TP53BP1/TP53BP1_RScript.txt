@@ -1,0 +1,486 @@
+# =============================================================================
+# TP53BP1 — Unified analysis (SenExp70, CSE, KBrO3, Exp70)
+# Stats used uniformly:
+#   - Proportions: GLM binomial, refit quasibinomial if overdispersed
+#   - Rates (puncta / TP53BP1+): NB with offset(log(count_TP53BP1+)), fallback quasi-Poisson
+# Outputs → figures/, results/
+# =============================================================================
+
+suppressPackageStartupMessages({
+  need <- c("tidyverse","readr","readxl","janitor","glue","emmeans","binom",
+            "scales","MASS","rlang","svglite")
+  to_install <- setdiff(need, rownames(installed.packages()))
+  if (length(to_install)) install.packages(to_install, dep = TRUE)
+  invisible(lapply(need, library, character.only = TRUE))
+})
+
+# ---------- Paths ----------
+root <- "F:/Repositories/ResearchGarbageBin/IF_TP53BP1"
+stopifnot(dir.exists(root))
+dir.create("figures", showWarnings = FALSE)
+dir.create("results", showWarnings = FALSE)
+
+# ============================== Helpers ======================================
+.list_all <- function(root) {
+  exts <- c("xlsx","xls","csv","tsv","txt")
+  pats <- paste0("\\.(", paste(exts, collapse="|"), ")$")
+  all <- list.files(root, recursive = TRUE, full.names = TRUE, ignore.case = TRUE)
+  all[grepl(pats, all, ignore.case = TRUE)]
+}
+find_one_any_strict <- function(stem_re, root = ".") {
+  pat  <- paste0(stem_re, "\\.(xlsx|xls|csv|tsv|txt)$")
+  hits <- list.files(root, pattern = pat, recursive = TRUE,
+                     full.names = TRUE, ignore.case = TRUE)
+  if (!length(hits)) stop(sprintf("STRICT: no match for /^%s\\.(xlsx|xls|csv|tsv|txt)$/ under: %s", stem_re, root))
+  normalizePath(hits[1], mustWork = TRUE)
+}
+find_one_tokens <- function(tokens, root = ".") {
+  all <- .list_all(root); bn <- basename(all)
+  keep <- all[vapply(seq_along(all), function(i)
+    all(sapply(tokens, function(t) grepl(t, bn[i], ignore.case = TRUE))), logical(1))]
+  if (!length(keep)) stop(sprintf("TOKENS: no file with tokens: %s", paste(tokens, collapse = " + ")))
+  depth    <- lengths(gregexpr("[/\\\\]", keep))
+  ext_rank <- match(tolower(tools::file_ext(keep)), c("xlsx","xls","csv","tsv","txt"))
+  keep <- keep[order(depth, ext_rank)]
+  normalizePath(keep[1], mustWork = TRUE)
+}
+safe_find <- function(strict_re, tokens, root = ".") {
+  tryCatch(
+    find_one_any_strict(strict_re, root),
+    error = function(e) {
+      message(e$message)
+      message("Falling back to tokens: [", paste(tokens, collapse = " + "), "]")
+      find_one_tokens(tokens, root)
+    }
+  )
+}
+find_exp70 <- function(root) { # non-senescence Exp70
+  all <- .list_all(root); bn <- basename(all)
+  keep <- all[grepl("(?i)\\bexp[_-]?70\\b", bn) & !grepl("(?i)sen", bn)]
+  if (!length(keep)) stop("No non-senescence Exp70 file found in: ", root)
+  normalizePath(keep[1], mustWork = TRUE)
+}
+
+parse_dose_num <- function(conc_char) {
+  out <- suppressWarnings(as.numeric(sub("([0-9.]+).*", "\\1", as.character(conc_char))))
+  ifelse(is.na(out), NA_real_, out)
+}
+
+# Tolerant CP column normaliser
+unify_cp_cols <- function(df) {
+  nm <- names(df)
+  if (!"count_nuclei" %in% nm) {
+    cand <- intersect(c("nuclei","nuclei_count","count_cells","cell_count","cells",
+                        "count_nuclei_total","total_nuclei"), nm)
+    if (length(cand)) df <- dplyr::rename(df, count_nuclei = !!rlang::sym(cand[1]))
+  }
+  if (!"count_nuclei_555pos" %in% nm) {
+    cand <- intersect(c("count_nuclei_555_pos","nuclei_555pos","nuclei_555_pos",
+                        "count_tp53bp1_pos","tp53bp1_pos_nuclei","count_nuclei_tp53bp1pos",
+                        "count_nuclei_555positive","n_tp53bp1_pos","tp53bp1_positive_nuclei"), nm)
+    if (length(cand)) df <- dplyr::rename(df, count_nuclei_555pos = !!rlang::sym(cand[1]))
+  }
+  if (!"count_nuclei_with_dots" %in% nm) {
+    cand <- intersect(c("count_nuclei_withdots","count_nuclei_with_puncta"), nm)
+    if (length(cand)) df <- dplyr::rename(df, count_nuclei_with_dots = !!rlang::sym(cand[1]))
+  }
+  if (!"count_puncta" %in% nm) {
+    cand <- intersect(c("count_children_puncta_count","puncta","count_puncta_total"), nm)
+    if (length(cand)) df <- dplyr::rename(df, count_puncta = !!rlang::sym(cand[1]))
+  }
+  if (!"metadata_conc" %in% nm) {
+    cand <- intersect(c("conc","concentration","dose","treatment",
+                        "metadata_concentration","metadata_dose"), nm)
+    if (length(cand)) df <- dplyr::rename(df, metadata_conc = !!rlang::sym(cand[1]))
+  }
+  if (!"metadata_sample" %in% nm) {
+    cand <- intersect(c("sample","well","group","metadata_well","metadata_group","metadata_sampleid"), nm)
+    if (length(cand)) df <- dplyr::rename(df, metadata_sample = !!rlang::sym(cand[1])) else
+      df <- dplyr::mutate(df, metadata_sample = NA_character_)
+  }
+  if (!"count_toobright_all" %in% nm) df <- dplyr::mutate(df, count_toobright_all = NA_real_)
+  df
+}
+
+# robust emmeans column naming
+std_emm_cols <- function(df) {
+  nm <- names(df)
+  if ("response"    %in% nm) df <- dplyr::rename(df, estimate = response)
+  else if ("prob"   %in% nm) df <- dplyr::rename(df, estimate = prob)
+  else if ("rate"   %in% nm) df <- dplyr::rename(df, estimate = rate)
+  else if ("ratio"  %in% nm) df <- dplyr::rename(df, estimate = ratio)
+  else if ("odds.ratio" %in% nm) df <- dplyr::rename(df, estimate = odds.ratio)
+  else if ("emmean" %in% nm) df <- dplyr::rename(df, estimate = emmean)
+  nm <- names(df); if ("asymp.LCL" %in% nm) df <- dplyr::rename(df, lcl = asymp.LCL)
+  else if ("lower.CL" %in% nm) df <- dplyr::rename(df, lcl = lower.CL)
+  else if ("LCL" %in% nm) df <- dplyr::rename(df, lcl = LCL)
+  nm <- names(df); if ("asymp.UCL" %in% nm) df <- dplyr::rename(df, ucl = asymp.UCL)
+  else if ("upper.CL" %in% nm) df <- dplyr::rename(df, ucl = upper.CL)
+  else if ("UCL" %in% nm) df <- dplyr::rename(df, ucl = UCL)
+  df
+}
+
+wilson_df <- function(success, total) {
+  res <- binom::binom.wilson(success, total)
+  tibble(p = res$mean, lwr = res$lower, upr = res$upper)
+}
+check_overdisp <- function(m) { rdf <- df.residual(m); if (rdf <= 0) NA_real_ else deviance(m)/rdf }
+
+theme_pub <- theme_minimal(base_size = 12) +
+  theme(text = element_text(family = "Arial", size = 12),
+        panel.grid.minor = element_blank(),
+        axis.title = element_text(face = "bold"),
+        strip.text = element_text(face = "bold"),
+        legend.position = "bottom")
+stars_map <- function(p) dplyr::case_when(is.na(p) ~ "", p < 0.001 ~ "***", p < 0.01 ~ "**", p < 0.05 ~ "*", TRUE ~ "")
+add_brackets_to_plot <- function(p, br_df, facet_key = "line") {
+  if (!nrow(br_df)) return(p)
+  tick <- 0.012
+  p +
+    geom_segment(data = br_df, aes(x = x1, xend = x2, y = y, yend = y),
+                 inherit.aes = FALSE, linewidth = 0.4) +
+    geom_segment(data = br_df, aes(x = x1, xend = x1, y = y, yend = y - tick),
+                 inherit.aes = FALSE, linewidth = 0.4) +
+    geom_segment(data = br_df, aes(x = x2, xend = x2, y = y, yend = y - tick),
+                 inherit.aes = FALSE, linewidth = 0.4) +
+    geom_text(   data = br_df, aes(x = xm, y = y + 0.8*tick, label = star),
+                 inherit.aes = FALSE, vjust = 0, size = 3.5)
+}
+
+# universal file reader (guards against base::range masking)
+read_cp <- function(path) {
+  rng <- NULL
+  ext <- tolower(tools::file_ext(path))
+  raw <- switch(ext,
+    "xlsx" = readxl::read_excel(path, sheet = 1, range = rng),
+    "xls"  = readxl::read_excel(path, sheet = 1, range = rng),
+    "csv"  = readr::read_csv(path, show_col_types = FALSE),
+             readr::read_tsv(path, show_col_types = FALSE)
+  ) %>% janitor::clean_names()
+  unify_cp_cols(raw)
+}
+
+# =========================== FILE DISCOVERY ==================================
+file_9C_CSE   <- safe_find("^9C[_-]?CSE$",   c("9C","CSE"),     root)
+file_9X_CSE   <- safe_find("^9X[_-]?CSE$",   c("9X","CSE"),     root)
+file_9C_KBR   <- safe_find("^9C[_-]?KBrO3$", c("9C","KBrO3"),   root)
+file_9X_KBR   <- safe_find("^9X[_-]?KBrO3$", c("9X","KBrO3"),   root)
+file_Sen70    <- safe_find("^SenExp70$",     c("SenExp","70"),  root)
+file_Exp70    <- find_exp70(root)
+
+cat("Using files:\n - ", file_9C_CSE, "\n - ", file_9X_CSE, "\n - ",
+    file_9C_KBR, "\n - ", file_9X_KBR, "\n - ", file_Sen70, "\n - ",
+    file_Exp70, "\n", sep="")
+
+# =========================== LOAD & TIDY =====================================
+as_dat <- function(path) {
+  x <- read_cp(path) %>%
+    mutate(file = basename(path))
+  # infer experiment & line from filename or columns
+  if (!"experiment" %in% names(x)) {
+    exp <- dplyr::case_when(
+      grepl("CSE", path, ignore.case=TRUE) ~ "CSE",
+      grepl("KBrO3|KBrO", path, ignore.case=TRUE) ~ "KBrO3",
+      grepl("SenExp", path, ignore.case=TRUE) ~ "SenExp",
+      TRUE ~ "Exp"
+    )
+    x$experiment <- exp
+  }
+  x <- x %>%
+    mutate(
+      line = dplyr::case_when(
+        grepl("9C", file, ignore.case=TRUE) ~ "ASC399cse",
+        grepl("9X", file, ignore.case=TRUE) ~ "ASC399",
+        TRUE ~ as.character(metadata_sample)
+      ),
+      conc = as.character(metadata_conc),
+      dose_num = parse_dose_num(conc),
+      p_555 = if_else(count_nuclei > 0, count_nuclei_555pos / count_nuclei, NA_real_),
+      puncta_per_555 = if_else(count_nuclei_555pos > 0, count_puncta / count_nuclei_555pos, NA_real_)
+    )
+  x
+}
+
+dat_CSE <- bind_rows(as_dat(file_9C_CSE), as_dat(file_9X_CSE)) %>%
+  mutate(experiment = "CSE") %>% filter(!is.na(line))
+dat_KBR <- bind_rows(as_dat(file_9C_KBR), as_dat(file_9X_KBR)) %>%
+  mutate(experiment = "KBrO3") %>% filter(!is.na(line))
+dat_SEN <- as_dat(file_Sen70) %>%
+  mutate(experiment = "SenExp",
+         code = factor(as.character(conc), levels = c("CC","CX","XC","XX")),
+         sample = factor(coalesce(metadata_sample, line))) %>%
+  filter(!is.na(code), !is.na(sample))
+dat_E70 <- as_dat(file_Exp70) %>%
+  mutate(experiment = "Exp70") %>% filter(!is.na(line))
+
+# factor orders for doses where numeric present
+levs_cse <- dat_CSE %>% distinct(conc, dose_num) %>% arrange(dose_num) %>% pull(conc)
+if (all(is.na(dat_CSE$dose_num))) levs_cse <- sort(unique(dat_CSE$conc))
+dat_CSE$conc <- factor(dat_CSE$conc, levels = levs_cse)
+
+levs_kbr <- dat_KBR %>% distinct(conc, dose_num) %>% arrange(dose_num) %>% pull(conc)
+if (all(is.na(dat_KBR$dose_num))) levs_kbr <- sort(unique(dat_KBR$conc))
+dat_KBR$conc <- factor(dat_KBR$conc, levels = levs_kbr)
+
+levs_e70 <- dat_E70 %>% distinct(conc, dose_num) %>% arrange(dose_num) %>% pull(conc)
+if (all(is.na(dat_E70$dose_num))) levs_e70 <- sort(unique(dat_E70$conc))
+dat_E70$conc <- factor(dat_E70$conc, levels = levs_e70)
+
+# =========================== STATS CORE ======================================
+fit_prop_glm <- function(d, success, total) {
+  d2 <- d %>% mutate(.success = .data[[success]], .failure = .data[[total]] - .data[[success]])
+  m <- glm(cbind(.success, .failure) ~ line * conc, data = d2, family = binomial())
+  phi <- check_overdisp(m)
+  if (is.finite(phi) && phi > 1.5) {
+    message(glue::glue("Overdispersion (phi≈{round(phi,2)}); refitting with quasibinomial."))
+    m <- glm(cbind(.success, .failure) ~ line * conc, data = d2, family = quasibinomial())
+  }
+  m
+}
+fit_nb_rate <- function(d, count_col) {
+  d2 <- d %>%
+    filter(count_nuclei_555pos > 0) %>%
+    mutate(offset_log = log(count_nuclei_555pos)) %>%
+    filter(is.finite(offset_log), !is.na(.data[[count_col]])) %>%
+    droplevels()
+  f_int <- as.formula(glue::glue("{count_col} ~ line * conc + offset(offset_log)"))
+  f_add <- as.formula(glue::glue("{count_col} ~ line + conc + offset(offset_log)"))
+  m <- try(MASS::glm.nb(f_int, data = d2), silent = TRUE)
+  if (inherits(m, "try-error")) m <- try(MASS::glm.nb(f_add, data = d2), silent = TRUE)
+  if (inherits(m, "try-error")) {
+    message("NB failed; using quasi-Poisson.")
+    m <- try(glm(f_int, data = d2, family = quasipoisson()), silent = TRUE)
+    if (inherits(m, "try-error")) m <- glm(f_add, data = d2, family = quasipoisson())
+  }
+  m
+}
+emm_pairs_vs_ctrl <- function(mod, specs, offset0 = FALSE) {
+  if (offset0) {
+    emmeans(mod, specs, type = "response", offset = 0) |>
+      contrast("trt.vs.ctrl", ref = 1) |>
+      summary(infer = TRUE, adjust = "BH") |> as_tibble()
+  } else {
+    emmeans(mod, specs, type = "response") |>
+      contrast("trt.vs.ctrl", ref = 1) |>
+      summary(infer = TRUE, adjust = "BH") |> as_tibble()
+  }
+}
+
+# =========================== A) SenExp70 (% TP53BP1+) ========================
+qc_sen <- dat_SEN %>%
+  group_by(sample, code) %>%
+  summarise(n_images = n(),
+            nuclei   = sum(count_nuclei, na.rm = TRUE),
+            tp53pos  = sum(count_nuclei_555pos, na.rm = TRUE), .groups="drop")
+message("SenExp70 QC:\n"); print(qc_sen, n = Inf)
+
+agg_sen <- dat_SEN %>%
+  group_by(sample, code) %>%
+  summarise(success = sum(count_nuclei_555pos), denom = sum(count_nuclei), .groups="drop") |>
+  bind_cols(wilson_df(.$success, .$denom))
+
+mod_sen <- glm(cbind(count_nuclei_555pos, count_nuclei - count_nuclei_555pos) ~ sample * code,
+               data = dat_SEN, family = binomial())
+phi_sen <- check_overdisp(mod_sen)
+if (is.finite(phi_sen) && phi_sen > 1.5) {
+  message(glue::glue("SenExp70 overdispersion (phi≈{round(phi_sen,2)}): quasibinomial"))
+  mod_sen <- glm(cbind(count_nuclei_555pos, count_nuclei - count_nuclei_555pos) ~ sample * code,
+                 data = dat_SEN, family = quasibinomial())
+}
+
+emm_sen <- emmeans(mod_sen, ~ code | sample, type = "response")
+pairs_sen_vsCC <- contrast(emm_sen, "trt.vs.ctrl", ref = 1) |> summary(infer = TRUE, adjust = "BH") |> as_tibble()
+pairs_sen_all  <- contrast(emm_sen, "pairwise")      |> summary(infer = TRUE, adjust = "BH") |> as_tibble()
+
+# Brackets
+ci_sen <- agg_sen |> transmute(line = sample, conc = code, upr)
+lv_sen <- levels(dat_SEN$code)
+pos_map <- setNames(seq_along(lv_sen), lv_sen)
+br_sen <- pairs_sen_vsCC |>
+  mutate(line = as.character(sample),
+         target = sub("\\s*-\\s*.*$", "", contrast),
+         star = stars_map(p.value)) |>
+  filter(star != "", target %in% lv_sen[-1]) |>
+  left_join(ci_sen |> group_by(line) |> summarise(y0 = max(upr, na.rm = TRUE) + 0.05),
+            by = "line") |>
+  mutate(x1 = pos_map[lv_sen[1]], x2 = pos_map[target], xm = (x1 + x2)/2,
+         order = match(target, lv_sen),
+         idx = ave(order, line, FUN = function(z) rank(z, ties.method = "first")),
+         y = y0 + (idx - 1)*0.05) |>
+  select(line, x1, x2, xm, y, star)
+
+# Plot
+pal_lines_sen <- setNames(scales::hue_pal()(length(levels(dat_SEN$sample))), levels(dat_SEN$sample))
+p_sen <- ggplot() +
+  geom_point(data = dat_SEN, aes(code, p_555, colour = sample),
+             position = position_jitter(width = 0.08, height = 0), alpha = 0.7, size = 1.7) +
+  geom_errorbar(data = agg_sen, aes(code, ymin = lwr, ymax = upr, colour = sample),
+                width = 0.10, linewidth = 0.4, position = position_dodge(width = 0.25)) +
+  geom_point(data = agg_sen, aes(code, p, colour = sample),
+             size = 2.4, position = position_dodge(width = 0.25)) +
+  scale_colour_manual(values = pal_lines_sen, name = "Sample") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, 1.05),
+                     expand = expansion(mult = c(0.02, 0.08))) +
+  labs(x = "Condition code", y = "% TP53BP1+ nuclei",
+       title = "SenExp70: % TP53BP1+ nuclei (GLM binomial/quasi; BH–FDR vs CC)") +
+  facet_wrap(~ sample, nrow = 1) + theme_pub
+p_sen <- add_brackets_to_plot(p_sen, br_sen, "line")
+
+ggsave("figures/SenExp70_TP53BP1pos.png", p_sen, width = 7.8, height = 3.2, dpi = 600)
+ggsave("figures/SenExp70_TP53BP1pos.svg", p_sen, width = 7.8, height = 3.2, device = svglite::svglite)
+write_csv(pairs_sen_vsCC, "results/SenExp70_pairs_vs_CC.csv")
+write_csv(pairs_sen_all,  "results/SenExp70_pairs_all.csv")
+means_sen_wide <- agg_sen |>
+  mutate(display = paste0(scales::percent(p, 0.1)," (",scales::percent(lwr,0.1),"–",scales::percent(upr,0.1),")")) |>
+  select(sample, code, display) |> pivot_wider(names_from = code, values_from = display) |> arrange(sample)
+write_csv(means_sen_wide, "results/SenExp70_means_wide.csv")
+
+# =================== B) CSE / KBrO3 — % and puncta per TP53BP1+ ==============
+run_expt <- function(expt_name, dat_expt, pal_lines) {
+  stopifnot(nrow(dat_expt) > 0)
+  # Models
+  m_pct   <- fit_prop_glm(dat_expt, "count_nuclei_555pos", "count_nuclei")
+  m_dots  <- fit_prop_glm(dat_expt, "count_nuclei_with_dots", "count_nuclei")
+  m_rate  <- fit_nb_rate(dat_expt, "count_puncta")
+
+  # EMMEANS
+  emm_pct   <- emmeans(m_pct,  ~ conc | line, type = "response") |> as_tibble() |> std_emm_cols()
+  emm_rate  <- emmeans(m_rate, ~ conc | line, type = "response", offset = 0) |> as_tibble() |> std_emm_cols()
+
+  pairs_pct  <- emm_pairs_vs_ctrl(m_pct,  ~ conc | line)
+  pairs_rate <- emm_pairs_vs_ctrl(m_rate, ~ conc | line, offset0 = TRUE)
+
+  # Aggregated Wilson for % plot CI tops
+  agg_pct <- dat_expt |>
+    group_by(line, conc) |>
+    summarise(success = sum(count_nuclei_555pos), denom = sum(count_nuclei), .groups="drop") |>
+    bind_cols(wilson_df(.$success, .$denom)) |>
+    mutate(metric = "pct_555")
+
+  # Brackets
+  lv <- levels(dat_expt$conc); pos_map <- setNames(seq_along(lv), lv)
+  ci_pct  <- agg_pct |> transmute(line, conc, upr)
+  base_pct <- ci_pct |> group_by(line) |> summarise(y0 = max(upr, na.rm = TRUE) + 0.04)
+  br_pct <- pairs_pct |>
+    mutate(target = sub("\\s*-\\s*.*$", "", contrast), star = stars_map(p.value)) |>
+    filter(star != "", target %in% lv[-1]) |>
+    left_join(base_pct, by = "line") |>
+    mutate(x1 = pos_map[lv[1]], x2 = pos_map[target], xm = (x1 + x2)/2,
+           order = match(target, lv),
+           idx = ave(order, line, FUN = function(z) rank(z, ties.method = "first")),
+           y = y0 + (idx - 1) * 0.04) |>
+    select(line, x1, x2, xm, y, star)
+
+  ci_rate <- emm_rate |> group_by(line, conc) |> summarise(upr = max(ucl), .groups="drop")
+  base_rate <- ci_rate |> group_by(line) |> summarise(y0 = max(upr, na.rm = TRUE) + 0.04)
+  br_rate <- pairs_rate |>
+    mutate(target = sub("\\s*-\\s*.*$", "", contrast), star = stars_map(p.value)) |>
+    filter(star != "", target %in% lv[-1]) |>
+    left_join(base_rate, by = "line") |>
+    mutate(x1 = pos_map[lv[1]], x2 = pos_map[target], xm = (x1 + x2)/2,
+           order = match(target, lv),
+           idx = ave(order, line, FUN = function(z) rank(z, ties.method = "first")),
+           y = y0 + (idx - 1) * 0.04) |>
+    select(line, x1, x2, xm, y, star)
+
+  # Plots
+  p_pct <- ggplot() +
+    geom_point(data = dat_expt, aes(conc, p_555, colour = line),
+               position = position_jitter(width = 0.08, height = 0), alpha = 0.7, size = 1.7) +
+    geom_errorbar(data = agg_pct, aes(conc, ymin = lwr, ymax = upr, colour = line),
+                  width = 0.08, linewidth = 0.4, position = position_dodge(width = 0.25)) +
+    geom_point(data = agg_pct, aes(conc, p, colour = line),
+               size = 2.4, position = position_dodge(width = 0.25)) +
+    scale_colour_manual(values = pal_lines, name = "Sample") +
+    scale_y_continuous(labels = percent_format(1)) +
+    labs(x = "Condition", y = "% TP53BP1+ nuclei",
+         title = paste0(expt_name, ": % TP53BP1+ nuclei (GLM binomial/quasi; BH–FDR vs control)")) +
+    facet_wrap(~ line, nrow = 1) + theme_pub
+  p_pct <- add_brackets_to_plot(p_pct, br_pct, "line")
+
+  p_rate <- ggplot() +
+    geom_point(data = dat_expt %>% filter(count_nuclei_555pos > 0),
+               aes(conc, puncta_per_555, colour = line),
+               alpha = 0.7, size = 1.7, position = position_jitter(width = 0.08, height = 0)) +
+    geom_errorbar(data = emm_rate, aes(conc, ymin = lcl, ymax = ucl, colour = line),
+                  width = 0.08, linewidth = 0.4, position = position_dodge(width = 0.25)) +
+    geom_point(data = emm_rate, aes(conc, estimate, colour = line),
+               size = 2.4, position = position_dodge(width = 0.25)) +
+    scale_colour_manual(values = pal_lines, name = "Sample") +
+    labs(x = "Condition", y = "Puncta per TP53BP1+ nucleus",
+         title = paste0(expt_name, ": puncta per TP53BP1+ nucleus (NB offset; BH–FDR vs control)")) +
+    facet_wrap(~ line, nrow = 1, scales = "free_y") + theme_pub
+  p_rate <- add_brackets_to_plot(p_rate, br_rate, "line")
+
+  # Save
+  fname_stub <- gsub("\\W+", "_", expt_name)
+  ggsave(file.path("figures", paste0(fname_stub, "_TP53BP1pos.png")), p_pct, width = 7.0, height = 3.0, dpi = 600)
+  ggsave(file.path("figures", paste0(fname_stub, "_TP53BP1pos.svg")), p_pct, width = 7.0, height = 3.0, device = svglite::svglite)
+  ggsave(file.path("figures", paste0(fname_stub, "_puncta_per_TP53BP1pos.png")), p_rate, width = 7.0, height = 3.0, dpi = 600)
+  ggsave(file.path("figures", paste0(fname_stub, "_puncta_per_TP53BP1pos.svg")), p_rate, width = 7.0, height = 3.0, device = svglite::svglite)
+
+  # CSVs
+  write_csv(emm_pct,  file.path("results", paste0(fname_stub, "_pct555_emmeans.csv")))
+  write_csv(pairs_pct,file.path("results", paste0(fname_stub, "_pct555_pairs_vs_ctrl.csv")))
+  write_csv(emm_rate, file.path("results", paste0(fname_stub, "_puncta_per_TP53BP1pos_emmeans.csv")))
+  write_csv(pairs_rate,file.path("results", paste0(fname_stub, "_puncta_per_TP53BP1pos_pairs_vs_ctrl.csv")))
+}
+
+pal_CSE <- setNames(c("#0072B2","#E69F00"), sort(unique(dat_CSE$line)))
+pal_KBR <- setNames(c("#0072B2","#E69F00"), sort(unique(dat_KBR$line)))
+run_expt("CSE",  dat_CSE, pal_CSE)
+run_expt("KBrO3",dat_KBR, pal_KBR)
+
+# =================== C) Exp70 — puncta per TP53BP1+ nucleus only =============
+# (Same NB offset approach as above)
+d_nb_e70 <- dat_E70 %>%
+  filter(count_nuclei_555pos > 0) %>%
+  mutate(offset_log = log(count_nuclei_555pos)) %>%
+  filter(is.finite(offset_log), !is.na(count_puncta)) %>% droplevels()
+f_int_e70 <- as.formula("count_puncta ~ line * conc + offset(offset_log)")
+f_add_e70 <- as.formula("count_puncta ~ line + conc + offset(offset_log)")
+m_e70 <- try(MASS::glm.nb(f_int_e70, data = d_nb_e70), silent = TRUE)
+if (inherits(m_e70, "try-error")) m_e70 <- try(MASS::glm.nb(f_add_e70, data = d_nb_e70), silent = TRUE)
+if (inherits(m_e70, "try-error")) {
+  message("Exp70: NB failed; using quasi-Poisson.")
+  m_e70 <- try(glm(f_int_e70, data = d_nb_e70, family = quasipoisson()), silent = TRUE)
+  if (inherits(m_e70, "try-error")) m_e70 <- glm(f_add_e70, data = d_nb_e70, family = quasipoisson())
+}
+
+emm_e70  <- emmeans(m_e70, ~ conc | line, type = "response", offset = 0) |> as_tibble() |> std_emm_cols()
+pairs_e70<- emmeans(m_e70, ~ conc | line, type = "response", offset = 0) |>
+  contrast("trt.vs.ctrl", ref = 1) |> summary(infer = TRUE, adjust = "BH") |> as_tibble()
+
+ci_e70   <- emm_e70 |> group_by(line, conc) |> summarise(upr = max(ucl), .groups="drop")
+lv_e70   <- levels(dat_E70$conc); pos_map_e70 <- setNames(seq_along(lv_e70), lv_e70)
+br_e70 <- pairs_e70 |>
+  mutate(target = sub("\\s*-\\s*.*$", "", contrast), star = stars_map(p.value)) |>
+  filter(star != "", target %in% lv_e70[-1]) |>
+  left_join(ci_e70 |> group_by(line) |> summarise(y0 = max(upr, na.rm = TRUE) + 0.04), by = "line") |>
+  mutate(x1 = pos_map_e70[lv_e70[1]], x2 = pos_map_e70[target], xm = (x1 + x2)/2,
+         order = match(target, lv_e70),
+         idx = ave(order, line, FUN = function(z) rank(z, ties.method = "first")),
+         y = y0 + (idx - 1) * 0.04) |>
+  select(line, x1, x2, xm, y, star)
+
+pal_E70 <- setNames(scales::hue_pal()(length(sort(unique(dat_E70$line)))), sort(unique(dat_E70$line)))
+p_e70 <- ggplot() +
+  geom_point(data = dat_E70 %>% filter(count_nuclei_555pos > 0),
+             aes(conc, puncta_per_555, colour = line),
+             alpha = 0.7, size = 1.7, position = position_jitter(width = 0.08, height = 0)) +
+  geom_errorbar(data = emm_e70, aes(conc, ymin = lcl, ymax = ucl, colour = line),
+                width = 0.08, linewidth = 0.4, position = position_dodge(width = 0.25)) +
+  geom_point(data = emm_e70, aes(conc, estimate, colour = line),
+             size = 2.4, position = position_dodge(width = 0.25)) +
+  scale_colour_manual(values = pal_E70, name = "Sample") +
+  labs(x = "Condition", y = "Puncta per TP53BP1+ nucleus",
+       title = "Exp70: puncta per TP53BP1+ nucleus (NB offset; BH–FDR vs control)") +
+  facet_wrap(~ line, nrow = 1, scales = "free_y") + theme_pub
+p_e70 <- add_brackets_to_plot(p_e70, br_e70, "line")
+
+ggsave("figures/Exp70_puncta_per_TP53BP1pos.png", p_e70, width = 7.0, height = 3.0, dpi = 600)
+ggsave("figures/Exp70_puncta_per_TP53BP1pos.svg", p_e70, width = 7.0, height = 3.0, device = svglite::svglite)
+write_csv(emm_e70,  "results/Exp70_puncta_per_TP53BP1pos_emmeans.csv")
+write_csv(pairs_e70,"results/Exp70_puncta_per_TP53BP1pos_pairs_vs_ctrl.csv")
+
+message("\nDone. All experiments analysed with the same statistical approach.")

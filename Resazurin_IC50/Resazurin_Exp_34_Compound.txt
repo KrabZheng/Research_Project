@@ -1,0 +1,19 @@
+ID	A1	B1
+Experiment	Resazurin_Exp34	Resazurin_Exp34
+Compound	H2O2	Rotenone
+mg/mmol	34.01	394.42
+Total Volume mL	3	3
+mg	30000	5
+mL	100	1
+Stock Concentration	8821	13
+Working Concentration	9	1.268
+Factor	1000	10
+Unit	mM	mM
+1	0	0
+2	0.03125	0.001
+3	0.0625	0.004
+4	0.125	0.012
+5	0.25	0.037
+6	0.5	0.111
+7	1	0.333
+8	2	1

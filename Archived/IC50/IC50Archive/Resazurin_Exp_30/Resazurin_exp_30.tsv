@@ -1,0 +1,17 @@
+Experiment	Type	ID	Name	Molar_mass	Vol	mg	mL	Stock_conc	Working_conc	Factor	Unit	1	2	3	4	5	6	7	8	Notes
+Resazurin 30	Treament	A1	CSE	na	6	na	10	100	100	1	%	0	0.8	1.6	3.1	6.25	12.5	25	50	
+Resazurin 30	Treament	A2	H2O2	34.01	6	30	100	9	9	1	mM	0	0.0002	0.001	0.004	0.016	0.063	0.25	1	
+Resazurin 30	Treament	A3	KBrO3	167	6	500	10	299	299	1	mM	0	0.05	0.2	0.8	3.125	12.5	50	200	
+Resazurin 30	Treament	A4	Menadione	172.18	6	10	1	58	6	10	mM	0	0.0001	0.0004	0.002	0.006	0.025	0.1	0.4	
+Resazurin 30	Treament	B1	RSL3	440.88	6	2	0.454	10	0.1	100	mM	0	0.000016	0.000031	0.000063	0.000125	0.00025	0.0005	0.001	
+Resazurin 30	Treament	B2	RSL3_CSE	440.88	6	2	0.454	10	0.1	100	mM	0	0.000016	0.000031	0.000063	0.000125	0.00025	0.0005	0.001	2% CSE
+Resazurin 30	Treament	B3	Erastin	547.04	6	1	0.183	10	0.1	100	mM	0	0.000016	0.000031	0.000063	0.000125	0.00025	0.0005	0.001	
+Resazurin 30	Treament	B4	Erastin_CSE	547.04	6	1	0.183	10	0.1	100	mM	0	0.000016	0.000031	0.000063	0.000125	0.00025	0.0005	0.001	2% CSE
+Resazurin 30	Patient	1	P676																	
+Resazurin 30	Patient	2	P676cse																	
+Resazurin 30	Patient	3	P679																	
+Resazurin 30	Patient	4	P679cse																	
+Resazurin 30	Patient	5	ASC390																	
+Resazurin 30	Patient	6	ASC390cse																	
+Resazurin 30	Patient	7	ASC397																	
+Resazurin 30	Patient	8	ASC397cse																	

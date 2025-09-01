@@ -1,0 +1,14 @@
+Experiment	Plate	Info_type	Info	Info_name	Patient	Condition	Info_key	Info_key_1	Info_key_2	Info_key_3	Info_key_4
+HNF1B_test	Plate_1	Sample	Sample 1	ASC052_CTL	ASC052	Control	Key	Reference			
+HNF1B_test	Plate_1	Sample	Sample 2	ASC052_acute	ASC052	Acute	Key	Key			
+HNF1B_test	Plate_1	Sample	Sample 3	ASC052_chronic	ASC052	Chronic	Key		Reference		
+HNF1B_test	Plate_1	Sample	Sample 4	ASC052_chronic_acute	ASC052	Chronic_acute	Key		Key		
+HNF1B_test	Plate_1	Sample	Sample 5	P636_CTL	P636	Control	Reference			Reference	
+HNF1B_test	Plate_1	Sample	Sample 6	P636_acute	P636	Acute	Key			Key	
+HNF1B_test	Plate_1	Sample	Sample 7	P636_chronic	P636	Chronic	Key				Reference
+HNF1B_test	Plate_1	Sample	Sample 8	P636_chronic_acute	P636	Chronic_acute	Key				Key
+HNF1B_test	Plate_1	Target	Target 1	RPS13			Reference	Reference	Reference	Reference	Reference
+HNF1B_test	Plate_1	Target	Target 2	NFE2L2			Key	Key	Key	Key	Key
+HNF1B_test	Plate_1	Target	Target 3	HNF1B			Key	Key	Key	Key	Key
+HNF1B_test	Plate_1	Target	Target 4	UGT1A			Key	Key	Key	Key	Key
+HNF1B_test	Plate_1	Target	Target 5	UGT1A10			Key	Key	Key	Key	Key

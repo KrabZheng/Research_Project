@@ -1,0 +1,16 @@
+run("Duplicate...", " ");
+setAutoThreshold("Default dark no-reset");
+//run("Threshold...");
+setThreshold(60000, 65535, "raw");
+setThreshold(60000, 65535, "raw");
+setThreshold(60000, 65535, "raw");
+setOption("BlackBackground", true);
+run("Convert to Mask");
+run("Close");
+run("Dilate");
+run("Dilate");
+run("Dilate");
+run("Dilate");
+run("Dilate");
+run("16-bit");
+run("Multiply...", "value=256.000");

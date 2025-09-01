@@ -1,0 +1,504 @@
+# comet_analysis_nucleus_level_sig.R
+# Compact outputs with color-blind friendly palettes
+# - Within-sample: one overview (no brackets) + per-pair plots only if significant
+# - Across-sample: kept, with cool(warm) palette for ASC399(ASC399cse)
+# - C = Control; X = CSE (pre & acute); S = SFN
+# - SVG-only (svglite fallback), y-axis min = 0
+
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(readxl)
+  library(janitor)
+  library(stringr)
+  library(readr)
+  library(glue)
+  library(ggplot2)
+  library(svglite)
+})
+
+# ============================== USER SETTINGS ===============================
+
+input_files <- c(
+  ASC399    = "Comet/comets_ASC399.xlsx",
+  ASC399cse = "Comet/comets_ASC399cse.xlsx"
+)
+
+# Keep which nuclei? (OpenComet 'Flag' column after tolower())
+keep_flags <- c("normal")   # set to NULL to keep all
+
+# Metrics (canonical names used throughout)
+metrics <- c("olive_moment", "tail_dna_percent", "tail_length")
+
+# Pretty axis labels
+axis_label <- c(
+  olive_moment     = "Olive tail moment",
+  tail_dna_percent = "% DNA in tail",
+  tail_length      = "Tail length (µm)"
+)
+
+# Minimal nuclei per group to run a test
+min_n_test <- 10L
+
+# Output directory
+outdir <- "comet_outputs_R"
+dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
+
+# ---- GLOBAL FONT SETTINGS: 12 pt Arial everywhere ----
+POINTSIZE <- 12
+FONT_FAMILY <- "Arial"
+
+# SVG device (svglite if available; else base svg), forced to 12pt Arial
+if (requireNamespace("svglite", quietly = TRUE)) {
+  svg_dev <- function(filename, width, height, ...) {
+    svglite::svglite(
+      file = filename, width = width, height = height,
+      pointsize = POINTSIZE,
+      system_fonts = list(sans = FONT_FAMILY, serif = FONT_FAMILY, mono = FONT_FAMILY)
+    )
+  }
+} else {
+  message("Note: 'svglite' not found. Using grDevices::svg() fallback. You can install.packages('svglite').")
+  svg_dev <- function(filename, width, height, ...) {
+    grDevices::svg(
+      filename = filename, width = width, height = height,
+      pointsize = POINTSIZE, family = FONT_FAMILY
+    )
+  }
+}
+
+# Make 12pt Arial the ggplot default everywhere
+theme_set(theme_minimal(base_family = FONT_FAMILY, base_size = POINTSIZE))
+theme_comet <- function() {
+  theme_minimal(base_family = FONT_FAMILY, base_size = POINTSIZE) +
+    theme(
+      panel.grid.minor = element_blank(),
+      legend.position  = "bottom",
+      axis.text.x      = element_text(angle = 20, hjust = 1, size = POINTSIZE),
+      axis.text.y      = element_text(size = POINTSIZE),
+      axis.title       = element_text(size = POINTSIZE),
+      legend.text      = element_text(size = POINTSIZE),
+      legend.title     = element_text(size = POINTSIZE),
+      strip.text       = element_text(size = POINTSIZE),
+      plot.title       = element_text(size = POINTSIZE, face = "plain"),
+      plot.caption     = element_text(size = POINTSIZE)
+    )
+}
+# Ensure geom_text() defaults match
+update_geom_defaults("text", list(family = FONT_FAMILY, size = POINTSIZE/ggplot2::.pt))
+
+# =========================== CONDITION DEFINITIONS ==========================
+# MAPPING:
+# C = Control; X = CSE; S = SFN
+pre_map   <- c(C = "Control pre", X = "CSE pre", S = "SFN pre")
+acute_map <- c(C = "Control acute", X = "Acute CSE")
+
+# Order and human labels (requested)
+condition_levels <- c("CC","CX","XC","XX","SC","SX")  # CC, CX, XC, XX, SC, SX
+condition_labels <- c(
+  CC = "CTL-CTL",
+  CX = "CTL-CSE",
+  XC = "CSE-CTL",
+  XX = "CSE-CSE",
+  SC = "SFN-CTL",
+  SX = "SFN-CSE"
+)
+
+# Console helper
+pretty_condition <- function(code) {
+  if (is.na(code)) return("NA")
+  paste0(code, " \u2192 ", condition_labels[[code]])
+}
+
+# ============================== PALETTES ====================================
+# Samples (across-sample plots)
+pal_sample <- c(ASC399 = "#0072B2", ASC399cse = "#E69F00")  # cool vs warm
+
+# Conditions by PRE group (within-sample overview)
+pal_condition <- c(
+  CC = "#0072B2",  # pre C (blues)
+  CX = "#56B4E9",  # pre C (blues)
+  XC = "#E69F00",  # pre X (warm)
+  XX = "#D55E00",  # pre X (warm)
+  SC = "#009E73",  # pre S (greens)
+  SX = "#66C2A5"   # pre S (greens)
+)
+
+# Two-group sig plots: baseline (control) cool, tested warm
+pal_pair_cool_warm <- c("#0072B2", "#E69F00")  # in factor order: baseline, target
+
+# ============================== HELPERS =====================================
+
+extract_code <- function(x) {
+  x <- as.character(x)
+  m1 <- stringr::str_match(x, "(?:^|[^A-Za-z0-9])([XxCcSs]{2})(?:[^A-Za-z0-9]|$)")
+  out <- toupper(m1[,2])
+  out[!out %in% condition_levels] <- NA_character_
+  out
+}
+
+sig_code <- function(p) {
+  ifelse(is.na(p), "n/a",
+  ifelse(p < 0.001, "***",
+  ifelse(p < 0.01,  "**",
+  ifelse(p < 0.05,  "*", "ns"))))
+}
+
+maybe_filter_flags <- function(data, keep) {
+  if (is.null(keep)) data else dplyr::filter(data, flag %in% keep)
+}
+
+canonicalise_metric_columns <- function(df_raw) {
+  df <- janitor::clean_names(df_raw)
+  nm <- names(df)
+
+  detect_col <- function(patterns_all) {
+    if (length(patterns_all) == 1L) {
+      hit <- nm[stringr::str_detect(nm, patterns_all)]
+      if (length(hit)) hit[[1]] else NA_character_
+    } else {
+      mask <- rep(TRUE, length(nm))
+      for (p in patterns_all) mask <- mask & stringr::str_detect(nm, p)
+      hit <- nm[mask]
+      if (length(hit)) hit[[1]] else NA_character_
+    }
+  }
+
+  col_file <- detect_col(c("file|image", "name"))
+  if (is.na(col_file)) col_file <- detect_col("^file$|^image$|^filename$|image_path|image_name")
+  col_flag <- detect_col("^flag$|status|class|category")
+  col_olive <- detect_col(c("olive","moment")); if (is.na(col_olive)) col_olive <- detect_col("tail.*moment|olive")
+  col_tdp   <- detect_col(c("tail","dna","percent|percentage|pct")); if (is.na(col_tdp)) col_tdp <- detect_col("dna.*tail.*percent|percent.*dna.*tail|dna_in_tail|%.*in.*tail")
+  col_tlen  <- detect_col(c("tail","length")); if (is.na(col_tlen)) col_tlen <- detect_col("length.*tail")
+
+  if (is.na(col_file) || is.na(col_olive) || is.na(col_tdp) || is.na(col_tlen)) {
+    stop(paste0(
+      "Cannot locate required columns.\n",
+      "Found -> file_name: ", col_file, " | flag: ", ifelse(is.na(col_flag), "NA", col_flag), "\n",
+      "Found -> olive_moment: ", col_olive, " | tail_dna_percent: ", col_tdp, " | tail_length: ", col_tlen, "\n",
+      "Available headers (after clean_names):\n  ", paste(nm, collapse = ", ")
+    ))
+  }
+
+  df |>
+    transmute(
+      file_name = as.character(.data[[col_file]]),
+      flag      = if (!is.na(col_flag)) tolower(as.character(.data[[col_flag]])) else "normal",
+      olive_moment     = readr::parse_number(as.character(.data[[col_olive]])),
+      tail_dna_percent = readr::parse_number(as.character(.data[[col_tdp]])),
+      tail_length      = readr::parse_number(as.character(.data[[col_tlen]]))
+    )
+}
+
+y_pos_for <- function(v) {
+  v <- v[is.finite(v)]
+  if (!length(v)) return(NA_real_)
+  q <- as.numeric(stats::quantile(v, probs = 0.995, names = FALSE, na.rm = TRUE))
+  r <- diff(range(v, na.rm = TRUE))
+  if (!is.finite(r) || r == 0) r <- if (q == 0) 1 else 0.1 * abs(q)
+  q + 0.08 * r
+}
+
+# ============================== LOAD & TIDY =================================
+
+read_one <- function(sample_name, path) {
+  message("Reading: ", sample_name, " <- ", path)
+  raw <- readxl::read_excel(path, .name_repair = "minimal")
+
+  canonicalise_metric_columns(raw) |>
+    dplyr::filter(stringr::str_ends(file_name, stringr::regex("\\.tif{1,2}$", ignore_case = TRUE))) |>
+    maybe_filter_flags(keep_flags) |>
+    dplyr::mutate(
+      condition_code = extract_code(file_name),
+      sample         = sample_name
+    ) |>
+    dplyr::filter(!is.na(condition_code)) |>
+    dplyr::mutate(
+      pre_code   = substr(condition_code, 1, 1),
+      acute_code = substr(condition_code, 2, 2),
+      pre_label  = pre_map[pre_code],
+      acute_label = acute_map[acute_code],
+      condition_factor = factor(
+        condition_code,
+        levels = condition_levels,
+        labels = condition_labels[condition_levels]
+      )
+    )
+}
+
+nuclei <- purrr::map2_dfr(names(input_files), input_files, read_one)
+if (!nrow(nuclei)) stop("No nuclei rows retained after filtering. Check file paths, flags, or filename patterns.")
+
+# QC: images & nuclei per group
+group_counts <- nuclei |>
+  dplyr::group_by(sample, condition_code, condition_factor) |>
+  dplyr::summarise(
+    images   = dplyr::n_distinct(file_name),
+    n_nuclei = dplyr::n(),
+    .groups = "drop"
+  )
+readr::write_csv(group_counts, file.path(outdir, "nucleus_counts_by_group.csv"))
+readr::write_csv(nuclei, file.path(outdir, "nucleus_level_clean.csv"))
+
+# ============================== STATISTICS ==================================
+
+# Within-sample: ALL pairwise condition comparisons (nucleus-level)
+within_sample_tests <- purrr::map_dfr(unique(nuclei$sample), function(smpl) {
+  dat <- dplyr::filter(nuclei, sample == smpl)
+  conds <- stats::na.omit(unique(dat$condition_code))
+  if (length(conds) < 2) return(tibble())
+  pw <- t(combn(sort(conds), 2))
+  purrr::map_dfr(seq_len(nrow(pw)), function(i) {
+    g1 <- pw[i, 1]; g2 <- pw[i, 2]
+    purrr::map_dfr(metrics, function(m) {
+      v1 <- dplyr::filter(dat, condition_code == g1) |> dplyr::pull(.data[[m]])
+      v2 <- dplyr::filter(dat, condition_code == g2) |> dplyr::pull(.data[[m]])
+      n1 <- sum(is.finite(v1)); n2 <- sum(is.finite(v2))
+      p  <- if (n1 >= min_n_test && n2 >= min_n_test) suppressWarnings(stats::wilcox.test(v1, v2, exact = FALSE)$p.value) else NA_real_
+      tibble::tibble(
+        sample = smpl,
+        metric = m,
+        contrast = paste(g1, "vs", g2),
+        group1 = g1, group2 = g2,
+        group1_label = condition_labels[g1],
+        group2_label = condition_labels[g2],
+        n_nuclei_g1 = n1, n_nuclei_g2 = n2,
+        median_g1 = stats::median(v1, na.rm = TRUE),
+        median_g2 = stats::median(v2, na.rm = TRUE),
+        diff_median = median_g1 - median_g2,
+        p_value = p
+      )
+    })
+  })
+}) |>
+  dplyr::group_by(sample, metric) |>
+  dplyr::mutate(p_adj_BH = p.adjust(p_value, method = "BH")) |>
+  dplyr::ungroup() |>
+  dplyr::mutate(sig = sig_code(p_value), sig_adj = sig_code(p_adj_BH))
+
+readr::write_csv(within_sample_tests, file.path(outdir, "stats_within_sample_all_pairs_nucleus.csv"))
+
+# Across-sample: ASC399 vs ASC399cse at SAME condition (nucleus-level)
+across_sample_tests <- purrr::map_dfr(condition_levels, function(cc) {
+  dat <- dplyr::filter(nuclei, condition_code == cc)
+  if (!all(c("ASC399","ASC399cse") %in% unique(dat$sample))) return(tibble())
+  purrr::map_dfr(metrics, function(m) {
+    v1 <- dplyr::filter(dat, sample == "ASC399")    |> dplyr::pull(.data[[m]])
+    v2 <- dplyr::filter(dat, sample == "ASC399cse") |> dplyr::pull(.data[[m]])
+    n1 <- sum(is.finite(v1)); n2 <- sum(is.finite(v2))
+    p  <- if (n1 >= min_n_test && n2 >= min_n_test) suppressWarnings(stats::wilcox.test(v1, v2, exact = FALSE)$p.value) else NA_real_
+    tibble::tibble(
+      condition_code = cc,
+      condition_label = condition_labels[cc],
+      metric = m,
+      contrast = "ASC399 vs ASC399cse",
+      n_nuclei_s1 = n1, n_nuclei_s2 = n2,
+      median_ASC399    = stats::median(v1, na.rm = TRUE),
+      median_ASC399cse = stats::median(v2, na.rm = TRUE),
+      diff_median = median_ASC399 - median_ASC399cse,
+      p_value = p
+    )
+  })
+}) |>
+  dplyr::group_by(metric) |>  # FDR across all conditions for each metric
+  dplyr::mutate(p_adj_BH = p.adjust(p_value, method = "BH")) |>
+  dplyr::ungroup() |>
+  dplyr::mutate(sig = sig_code(p_value), sig_adj = sig_code(p_adj_BH))
+
+readr::write_csv(across_sample_tests, file.path(outdir, "stats_across_samples_all_conditions_nucleus.csv"))
+
+# ===================== SIGNIFICANT WITHIN-SAMPLE PAIRS (OF INTEREST) ========
+
+pairs_acute <- tibble::tribble(
+  ~target, ~baseline, ~effect,
+  "CX","CC","Acute effect (X vs C) within Control pre",
+  "XX","XC","Acute effect (X vs C) within CSE pre",
+  "SX","SC","Acute effect (X vs C) within SFN pre"
+)
+
+pairs_pre <- tibble::tribble(
+  ~target, ~baseline, ~effect,
+  # Pre effects at CONTROL acute (C)
+  "XC","CC","Pre-treatment effect at Control acute (CSE vs Control pre)",
+  "SC","CC","Pre-treatment effect at Control acute (SFN vs Control pre)",
+  # Pre effects at ACUTE CSE (X)
+  "XX","CX","Pre-treatment effect at Acute CSE (CSE vs Control pre)",
+  "SX","CX","Pre-treatment effect at Acute CSE (SFN vs Control pre)"
+)
+
+pairs_all <- bind_rows(pairs_acute, pairs_pre)
+
+find_sig_pairs <- function(metric_name) {
+  tests <- dplyr::filter(within_sample_tests, metric == metric_name)
+  rel1 <- dplyr::inner_join(tests, pairs_all, by = c("group1" = "target", "group2" = "baseline")) |>
+    dplyr::mutate(target = group1, baseline = group2)
+  rel2 <- dplyr::inner_join(tests, pairs_all, by = c("group2" = "target", "group1" = "baseline")) |>
+    dplyr::mutate(target = group2, baseline = group1)
+
+  bind_rows(rel1, rel2) |>
+    dplyr::filter(p_adj_BH < 0.05) |>
+    dplyr::transmute(
+      sample, metric = metric_name, target, baseline, effect,
+      p_adj_BH, label = sig_code(p_adj_BH)
+    ) |>
+    dplyr::distinct()
+}
+
+# ================================ PLOTS =====================================
+
+# ---------- WITHIN-SAMPLE OVERVIEW (no brackets), faceted by sample ----------
+for (m in metrics) {
+  pd <- position_jitter(width = 0.15, height = 0, seed = 1)
+  p <- nuclei |>
+    dplyr::mutate(
+      cond_short = factor(condition_code, levels = condition_levels),
+      sample = factor(sample, levels = c("ASC399","ASC399cse"))
+    ) |>
+    ggplot(aes(cond_short, .data[[m]], fill = cond_short)) +
+    geom_violin(width = 0.9, alpha = 0.15, colour = NA, trim = FALSE) +
+    geom_boxplot(width = 0.55, alpha = 0.35, outlier.shape = NA, linewidth = 0.4) +
+    geom_jitter(position = pd, size = 0.6, alpha = 0.25) +
+    facet_wrap(~ sample, nrow = 1) +
+    scale_fill_manual(values = pal_condition, drop = FALSE) +
+    scale_x_discrete(labels = condition_labels[condition_levels]) +  # pretty names
+    labs(
+      x = "Condition",
+      y = axis_label[[m]],
+      title = paste0(axis_label[[m]], ": within-sample overview")
+    ) +
+    theme_comet() +
+    guides(fill = "none") +
+    coord_cartesian(ylim = c(0, NA))
+
+  ggsave(file.path(outdir, paste0(m, "_WITHIN_OVERVIEW_by_condition_NUCLEI.svg")),
+         p, width = 10.2, height = 5.0, device = svg_dev)
+}
+
+# ---------- WITHIN-SAMPLE: PER-PAIR PLOTS (only if significant) -------------
+for (m in metrics) {
+  sig_pairs <- find_sig_pairs(m)
+  if (!nrow(sig_pairs)) next
+
+  for (i in seq_len(nrow(sig_pairs))) {
+    sp <- sig_pairs[i, ]
+    smpl <- sp$sample; baseline <- sp$baseline; target <- sp$target
+    effect_txt <- sp$effect; stars <- sp$label; padj <- signif(sp$p_adj_BH, 3)
+
+    baseline_lab <- condition_labels[[baseline]]
+    target_lab   <- condition_labels[[target]]
+
+    dat <- nuclei |>
+      dplyr::filter(sample == smpl, condition_code %in% c(baseline, target)) |>
+      dplyr::mutate(cond_pair = factor(condition_code, levels = c(baseline, target)))
+
+    # compute n and medians per group for caption
+    sdat <- dat |>
+      dplyr::group_by(cond_pair) |>
+      dplyr::summarise(n = dplyr::n(), med = stats::median(.data[[m]], na.rm = TRUE), .groups = "drop")
+
+    n_base <- sdat$n[sdat$cond_pair == levels(dat$cond_pair)[1]]
+    n_targ <- sdat$n[sdat$cond_pair == levels(dat$cond_pair)[2]]
+    med_base <- signif(sdat$med[sdat$cond_pair == levels(dat$cond_pair)[1]], 4)
+    med_targ <- signif(sdat$med[sdat$cond_pair == levels(dat$cond_pair)[2]], 4)
+
+    # bracket position
+    v_all <- dat[[m]]
+    yb <- y_pos_for(v_all)
+    r  <- diff(range(v_all, na.rm = TRUE)); if (!is.finite(r) || r == 0) r <- 1
+    tick <- 0.03 * r; label_nudge <- 0.02 * r
+    pd <- position_jitter(width = 0.15, height = 0, seed = 1)
+
+    p <- ggplot(dat, aes(cond_pair, .data[[m]], fill = cond_pair)) +
+      geom_violin(width = 0.9, alpha = 0.15, colour = NA, trim = FALSE) +
+      geom_boxplot(width = 0.55, alpha = 0.35, outlier.shape = NA, linewidth = 0.4) +
+      geom_jitter(position = pd, size = 0.6, alpha = 0.25) +
+      scale_fill_manual(values = pal_pair_cool_warm) +
+      scale_x_discrete(labels = c(baseline_lab, target_lab)) +  # pretty tick labels
+      labs(
+        x = NULL,
+        y = axis_label[[m]],
+        title = glue("{smpl} – {axis_label[[m]]}: {baseline_lab} vs {target_lab}"),
+        caption = glue("{effect_txt} | n: {baseline_lab}={n_base}, {target_lab}={n_targ}; ",
+                       "medians: {baseline_lab}={med_base}, {target_lab}={med_targ}; ",
+                       "BH-FDR p={padj} {stars}")
+      ) +
+      theme_comet() +
+      guides(fill = "none") +
+      coord_cartesian(ylim = c(0, NA)) +
+      geom_segment(aes(x = 1, xend = 2, y = yb, yend = yb), inherit.aes = FALSE, linewidth = 0.4) +
+      geom_segment(aes(x = 1, xend = 1, y = yb, yend = yb - tick), inherit.aes = FALSE, linewidth = 0.4) +
+      geom_segment(aes(x = 2, xend = 2, y = yb, yend = yb - tick), inherit.aes = FALSE, linewidth = 0.4) +
+      geom_text(aes(x = 1.5, y = yb + label_nudge, label = stars), inherit.aes = FALSE, vjust = 0, size = 3.6) +
+      expand_limits(y = yb + label_nudge)
+
+    fname <- glue("{m}_{smpl}_PAIR_{baseline}_vs_{target}_NUCLEI.svg")
+    ggsave(file.path(outdir, fname), p, width = 6.6, height = 4.8, device = svg_dev)
+  }
+}
+
+# ---------- ACROSS-SAMPLE PLOTS (kept; add sample palette) ----------
+make_across_ann <- function(metric_name) {
+  ann <- across_sample_tests |>
+    dplyr::filter(metric == metric_name, p_adj_BH < 0.05) |>
+    dplyr::transmute(condition_code, label = sig_code(p_adj_BH))
+  if (!nrow(ann)) return(ann)
+  ann$y <- purrr::map_dbl(ann$condition_code, function(cc) {
+    v <- nuclei |> dplyr::filter(.data$condition_code == cc) |> dplyr::pull(.data[[metric_name]])
+    y_pos_for(v)
+  })
+  ann
+}
+
+for (m in metrics) {
+  ann_ac <- make_across_ann(m)
+  pd <- position_jitter(width = 0.08, height = 0, seed = 1)
+
+  p <- nuclei |>
+    dplyr::mutate(sample = factor(sample, levels = c("ASC399","ASC399cse"))) |>
+    ggplot(aes(sample, .data[[m]], fill = sample)) +
+    geom_violin(width = 0.9, alpha = 0.15, colour = NA, trim = FALSE) +
+    geom_boxplot(width = 0.55, alpha = 0.35, outlier.shape = NA, linewidth = 0.4) +
+    geom_point(position = pd, size = 0.6, alpha = 0.25) +
+    facet_wrap(
+      ~ factor(condition_code, levels = condition_levels),
+      nrow = 1,
+      labeller = as_labeller(condition_labels)   # pretty facet strips
+    ) +
+    scale_fill_manual(values = pal_sample, drop = FALSE) +
+    labs(
+      x = NULL, y = axis_label[[m]],
+      title = paste0(axis_label[[m]], ": ASC399 vs ASC399cse by condition")
+    ) +
+    theme_comet() +
+    guides(fill = "none") +
+    coord_cartesian(ylim = c(0, NA))
+
+  if (nrow(ann_ac)) {
+    ann_ac2 <- ann_ac |> dplyr::mutate(x1 = 1, x2 = 2)
+    p <- p +
+      geom_segment(data = ann_ac2, aes(x = x1, xend = x2, y = y, yend = y), inherit.aes = FALSE, linewidth = 0.4) +
+      geom_segment(data = ann_ac2, aes(x = x1, xend = x1, y = y, yend = y - 0.02*y), inherit.aes = FALSE, linewidth = 0.4) +
+      geom_segment(data = ann_ac2, aes(x = x2, xend = x2, y = y, yend = y - 0.02*y), inherit.aes = FALSE, linewidth = 0.4) +
+      geom_text(   data = ann_ac2, aes(x = 1.5, y = y + 0.03*y, label = label), inherit.aes = FALSE, vjust = 0, size = 3.6) +
+      expand_limits(y = max(ann_ac2$y, na.rm = TRUE))
+  }
+
+  ggsave(file.path(outdir, paste0(m, "_ACROSS_SAMPLES_by_condition_NUCLEI.svg")),
+         p, width = 12, height = 4.8, device = svg_dev)
+}
+
+# =============================== CONSOLE INFO ===============================
+
+message("\nCondition code naming:")
+purrr::walk(condition_levels, ~message("  ", pretty_condition(.x)))
+
+message("\nSaved outputs (SVG only) in: ", normalizePath(outdir, winslash = "/"))
+message("  - nucleus_level_clean.csv")
+message("  - nucleus_counts_by_group.csv")
+message("  - stats_within_sample_all_pairs_nucleus.csv")
+message("  - stats_across_samples_all_conditions_nucleus.csv")
+message("  - Figures:")
+message("      * *_WITHIN_OVERVIEW_by_condition_NUCLEI.svg  (one per metric)")
+message("      * *_PAIR_<baseline>_vs_<target>_NUCLEI.svg   (only significant pairs)")
+message("      * *_ACROSS_SAMPLES_by_condition_NUCLEI.svg   (as before)")
+
+# =============================== END OF FILE ================================

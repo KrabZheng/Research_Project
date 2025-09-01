@@ -1,0 +1,15 @@
+Experiment	Plate	Info_type	Info	Info_name	Patient	Condition	Info_key	Info_key_1	Info_key_2	Info_key_3
+Sen_Exp_65	Plate_1	Sample	Sample 1	P676	P676	Control	Key	Reference		
+Sen_Exp_65	Plate_1	Sample	Sample 2	P676cse	P676	CSE	Key	Key		
+Sen_Exp_65	Plate_1	Sample	Sample 3	P679	P679	Control	Key		Reference	
+Sen_Exp_65	Plate_1	Sample	Sample 4	P679cse	P679	CSE	Key		Key	
+Sen_Exp_65	Plate_1	Sample	Sample 5	P698	P698	Control	Reference			Reference
+Sen_Exp_65	Plate_1	Sample	Sample 6	P698cse	P698	CSE	Key			Key
+Sen_Exp_65	Plate_1	Target	Target 1	RPS13			Reference	Reference	Reference	Reference
+Sen_Exp_65	Plate_1	Target	Target 2	NFE2L2			Key	Key	Key	Key
+Sen_Exp_65	Plate_1	Target	Target 3	HNF1B_Original			Key	Key	Key	Key
+Sen_Exp_65	Plate_1	Target	Target 4	HNF1B_V1V4			Key	Key	Key	Key
+Sen_Exp_65	Plate_1	Target	Target 5	HNF1B_V2V3			Key	Key	Key	Key
+Sen_Exp_65	Plate_1	Target	Target 6	HNF1B_V3			Key	Key	Key	Key
+Sen_Exp_65	Plate_1	Target	Target 7	HNF1B_V4			Key	Key	Key	Key
+Sen_Exp_65	Plate_1	Target	Target 8	UGT1A10			Key	Key	Key	Key

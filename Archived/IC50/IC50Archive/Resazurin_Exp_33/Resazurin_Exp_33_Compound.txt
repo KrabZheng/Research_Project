@@ -1,0 +1,20 @@
+ID	A1	A2
+Experiment	Resazurin_Exp33	Resazurin_Exp33
+Compound	BSO_HCl	Rotenone
+mg/mmol	258.77	394.42
+Total Volume mL	4	4
+mg	7	5
+mL	0.1	1
+Stock Concentration	271	13
+Working Concentration	270.51	1.268
+Factor	1	10
+Unit	mM	mM
+1	0	0
+2	0.0003	0.001
+3	0.0016	0.004
+4	0.01	0.012
+5	0.04	0.037
+6	0.2	0.111
+7	1	0.333
+8	5	1
+Notes		

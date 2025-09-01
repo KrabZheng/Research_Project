@@ -1,0 +1,19 @@
+ID	A1	A2	A3	A4
+Experiment	Resazurin_Exp35	Resazurin_Exp35	Resazurin_Exp35	Resazurin_Exp35
+Compound	KBrO3	KBrO3_SFN	KBrO3_NAC	KBrO3_Erastin
+mg/mmol	167	167	167	167
+Total Volume mL	6	6	6	6
+mg	500	500	500	500
+mL	10	10	10	10
+Stock Concentration	299	299	299	299
+Working Concentration	299	299	299	299
+Factor	1	1	1	1
+Unit	mM	mM	mM	mM
+1	0	0	0	0
+2	0.05	0.05	0.05	0.05
+3	0.2	0.2	0.2	0.2
+4	0.8	0.8	0.8	0.8
+5	3.125	3.125	3.125	3.125
+6	12.5	12.5	12.5	12.5
+7	50	50	50	50
+8	200	200	200	200

@@ -1,0 +1,91 @@
+sample,metric,contrast,group1,group2,group1_label,group2_label,n_nuclei_g1,n_nuclei_g2,median_g1,median_g2,diff_median,p_value,p_adj_BH,sig,sig_adj
+ASC399,olive_moment,CC vs CX,CC,CX,CC: Control / Control,CX: Control / Acute CSE,68,101,4.248999649,13.5410825,-9.292082849,2.62E-06,1.97E-05,***,***
+ASC399,tail_dna_percent,CC vs CX,CC,CX,CC: Control / Control,CX: Control / Acute CSE,68,101,17.78439114,38.9341563,-21.14976516,8.16E-06,6.12E-05,***,***
+ASC399,tail_length,CC vs CX,CC,CX,CC: Control / Control,CX: Control / Acute CSE,68,101,17,58,-41,6.16E-09,3.08E-08,***,***
+ASC399,olive_moment,CC vs SC,CC,SC,CC: Control / Control,SC: SFN pre / Control,68,50,4.248999649,9.200593498,-4.951593849,0.002269563,0.005673908,**,**
+ASC399,tail_dna_percent,CC vs SC,CC,SC,CC: Control / Control,SC: SFN pre / Control,68,50,17.78439114,32.19650241,-14.41211127,2.29E-04,8.60E-04,***,***
+ASC399,tail_length,CC vs SC,CC,SC,CC: Control / Control,SC: SFN pre / Control,68,50,17,37,-20,0.001108483,0.00241451,**,**
+ASC399,olive_moment,CC vs SX,CC,SX,CC: Control / Control,SX: SFN pre / Acute CSE,68,52,4.248999649,7.717909308,-3.468909659,0.005937141,0.012722445,**,*
+ASC399,tail_dna_percent,CC vs SX,CC,SX,CC: Control / Control,SX: SFN pre / Acute CSE,68,52,17.78439114,25.32878563,-7.544394485,0.013490587,0.033726467,*,*
+ASC399,tail_length,CC vs SX,CC,SX,CC: Control / Control,SX: SFN pre / Acute CSE,68,52,17,40.5,-23.5,2.00E-05,7.48E-05,***,***
+ASC399,olive_moment,CC vs XC,CC,XC,CC: Control / Control,XC: CSE pre / Control,68,53,4.248999649,25.35311831,-21.10411866,2.24E-09,3.37E-08,***,***
+ASC399,tail_dna_percent,CC vs XC,CC,XC,CC: Control / Control,XC: CSE pre / Control,68,53,17.78439114,63.88123677,-46.09684563,1.81E-08,2.72E-07,***,***
+ASC399,tail_length,CC vs XC,CC,XC,CC: Control / Control,XC: CSE pre / Control,68,53,17,70,-53,1.07E-11,1.61E-10,***,***
+ASC399,olive_moment,CC vs XX,CC,XX,CC: Control / Control,XX: CSE pre / Acute CSE,68,53,4.248999649,11.7950587,-7.546059052,1.47E-05,7.34E-05,***,***
+ASC399,tail_dna_percent,CC vs XX,CC,XX,CC: Control / Control,XX: CSE pre / Acute CSE,68,53,17.78439114,37.67432036,-19.88992922,2.29E-05,1.15E-04,***,***
+ASC399,tail_length,CC vs XX,CC,XX,CC: Control / Control,XX: CSE pre / Acute CSE,68,53,17,69,-52,3.30E-10,2.47E-09,***,***
+ASC399,olive_moment,CX vs SC,CX,SC,CX: Control / Acute CSE,SC: SFN pre / Control,101,50,13.5410825,9.200593498,4.340489,0.156347062,0.180400457,ns,ns
+ASC399,tail_dna_percent,CX vs SC,CX,SC,CX: Control / Acute CSE,SC: SFN pre / Control,101,50,38.9341563,32.19650241,6.737653895,0.829388201,0.829388201,ns,ns
+ASC399,tail_length,CX vs SC,CX,SC,CX: Control / Acute CSE,SC: SFN pre / Control,101,50,58,37,21,0.024443901,0.040739835,*,*
+ASC399,olive_moment,CX vs SX,CX,SX,CX: Control / Acute CSE,SX: SFN pre / Acute CSE,101,52,13.5410825,7.717909308,5.82317319,0.114720242,0.156436694,ns,ns
+ASC399,tail_dna_percent,CX vs SX,CX,SX,CX: Control / Acute CSE,SX: SFN pre / Acute CSE,101,52,38.9341563,25.32878563,13.60537068,0.097273909,0.145910863,ns,ns
+ASC399,tail_length,CX vs SX,CX,SX,CX: Control / Acute CSE,SX: SFN pre / Acute CSE,101,52,58,40.5,17.5,0.334533084,0.358428304,ns,ns
+ASC399,olive_moment,CX vs XC,CX,XC,CX: Control / Acute CSE,XC: CSE pre / Control,101,53,13.5410825,25.35311831,-11.81203581,0.045050761,0.084470176,*,ns
+ASC399,tail_dna_percent,CX vs XC,CX,XC,CX: Control / Acute CSE,XC: CSE pre / Control,101,53,38.9341563,63.88123677,-24.94708046,0.033198111,0.062246459,*,ns
+ASC399,tail_length,CX vs XC,CX,XC,CX: Control / Acute CSE,XC: CSE pre / Control,101,53,58,70,-12,0.066484988,0.090661347,ns,ns
+ASC399,olive_moment,CX vs XX,CX,XX,CX: Control / Acute CSE,XX: CSE pre / Acute CSE,101,53,13.5410825,11.7950587,1.746023797,0.63181214,0.676941578,ns,ns
+ASC399,tail_dna_percent,CX vs XX,CX,XX,CX: Control / Acute CSE,XX: CSE pre / Acute CSE,101,53,38.9341563,37.67432036,1.259835941,0.645399358,0.691499313,ns,ns
+ASC399,tail_length,CX vs XX,CX,XX,CX: Control / Acute CSE,XX: CSE pre / Acute CSE,101,53,58,69,-11,0.164486072,0.20560759,ns,ns
+ASC399,olive_moment,SC vs SX,SC,SX,SC: SFN pre / Control,SX: SFN pre / Acute CSE,50,52,9.200593498,7.717909308,1.48268419,0.695354774,0.695354774,ns,ns
+ASC399,tail_dna_percent,SC vs SX,SC,SX,SC: SFN pre / Control,SX: SFN pre / Acute CSE,50,52,32.19650241,25.32878563,6.867716781,0.175247534,0.219059418,ns,ns
+ASC399,tail_length,SC vs SX,SC,SX,SC: SFN pre / Control,SX: SFN pre / Acute CSE,50,52,37,40.5,-3.5,0.257824767,0.297490116,ns,ns
+ASC399,olive_moment,SC vs XC,SC,XC,SC: SFN pre / Control,XC: CSE pre / Control,50,53,9.200593498,25.35311831,-16.15252481,8.93E-04,0.002677504,***,**
+ASC399,tail_dna_percent,SC vs XC,SC,XC,SC: SFN pre / Control,XC: CSE pre / Control,50,53,32.19650241,63.88123677,-31.68473436,0.031726435,0.062246459,*,ns
+ASC399,tail_length,SC vs XC,SC,XC,SC: SFN pre / Control,XC: CSE pre / Control,50,53,37,70,-33,1.18E-04,3.53E-04,***,***
+ASC399,olive_moment,SC vs XX,SC,XX,SC: SFN pre / Control,XX: CSE pre / Acute CSE,50,53,9.200593498,11.7950587,-2.594465203,0.114024026,0.156436694,ns,ns
+ASC399,tail_dna_percent,SC vs XX,SC,XX,SC: SFN pre / Control,XX: CSE pre / Acute CSE,50,53,32.19650241,37.67432036,-5.477817955,0.595289659,0.686872684,ns,ns
+ASC399,tail_length,SC vs XX,SC,XX,SC: SFN pre / Control,XX: CSE pre / Acute CSE,50,53,37,69,-32,0.001126771,0.00241451,**,**
+ASC399,olive_moment,SX vs XC,SX,XC,SX: SFN pre / Acute CSE,XC: CSE pre / Control,52,53,7.717909308,25.35311831,-17.635209,8.12E-04,0.002677504,***,**
+ASC399,tail_dna_percent,SX vs XC,SX,XC,SX: SFN pre / Acute CSE,XC: CSE pre / Control,52,53,25.32878563,63.88123677,-38.55245114,4.39E-04,0.001317278,***,**
+ASC399,tail_length,SX vs XC,SX,XC,SX: SFN pre / Acute CSE,XC: CSE pre / Control,52,53,40.5,70,-29.5,0.009432867,0.017686625,**,*
+ASC399,olive_moment,SX vs XX,SX,XX,SX: SFN pre / Acute CSE,XX: CSE pre / Acute CSE,52,53,7.717909308,11.7950587,-4.077149393,0.075316933,0.125528221,ns,ns
+ASC399,tail_dna_percent,SX vs XX,SX,XX,SX: SFN pre / Acute CSE,XX: CSE pre / Acute CSE,52,53,25.32878563,37.67432036,-12.34553474,0.041861529,0.069769216,*,ns
+ASC399,tail_length,SX vs XX,SX,XX,SX: SFN pre / Acute CSE,XX: CSE pre / Acute CSE,52,53,40.5,69,-28.5,0.034681237,0.052021855,*,ns
+ASC399,olive_moment,XC vs XX,XC,XX,XC: CSE pre / Control,XX: CSE pre / Acute CSE,53,53,25.35311831,11.7950587,13.55805961,0.132624184,0.16578023,ns,ns
+ASC399,tail_dna_percent,XC vs XX,XC,XX,XC: CSE pre / Control,XX: CSE pre / Acute CSE,53,53,63.88123677,37.67432036,26.20691641,0.129400301,0.176454956,ns,ns
+ASC399,tail_length,XC vs XX,XC,XX,XC: CSE pre / Control,XX: CSE pre / Acute CSE,53,53,70,69,1,0.697544107,0.697544107,ns,ns
+ASC399cse,olive_moment,CC vs CX,CC,CX,CC: Control / Control,CX: Control / Acute CSE,48,19,12.39296836,7.100161326,5.292807032,0.05944936,0.148623401,ns,ns
+ASC399cse,tail_dna_percent,CC vs CX,CC,CX,CC: Control / Control,CX: Control / Acute CSE,48,19,36.33035975,22.90374621,13.42661354,0.057595277,0.107991144,ns,ns
+ASC399cse,tail_length,CC vs CX,CC,CX,CC: Control / Control,CX: Control / Acute CSE,48,19,60,38,22,0.029455018,0.115104923,*,ns
+ASC399cse,olive_moment,CC vs SC,CC,SC,CC: Control / Control,SC: SFN pre / Control,48,30,12.39296836,7.652946167,4.740022192,0.247909249,0.371863874,ns,ns
+ASC399cse,tail_dna_percent,CC vs SC,CC,SC,CC: Control / Control,SC: SFN pre / Control,48,30,36.33035975,19.2645252,17.06583455,0.033076821,0.0896884,*,ns
+ASC399cse,tail_length,CC vs SC,CC,SC,CC: Control / Control,SC: SFN pre / Control,48,30,60,46.5,13.5,0.23144456,0.385740933,ns,ns
+ASC399cse,olive_moment,CC vs SX,CC,SX,CC: Control / Control,SX: SFN pre / Acute CSE,48,16,12.39296836,5.304451868,7.088516491,0.028245162,0.093638912,*,ns
+ASC399cse,tail_dna_percent,CC vs SX,CC,SX,CC: Control / Control,SX: SFN pre / Acute CSE,48,16,36.33035975,17.20248023,19.12787953,0.019626981,0.0896884,*,ns
+ASC399cse,tail_length,CC vs SX,CC,SX,CC: Control / Control,SX: SFN pre / Acute CSE,48,16,60,31,29,0.032357463,0.115104923,*,ns
+ASC399cse,olive_moment,CC vs XC,CC,XC,CC: Control / Control,XC: CSE pre / Control,48,43,12.39296836,23.24768368,-10.85471532,0.676421895,0.724737745,ns,ns
+ASC399cse,tail_dna_percent,CC vs XC,CC,XC,CC: Control / Control,XC: CSE pre / Control,48,43,36.33035975,48.40876184,-12.07840209,1,1,ns,ns
+ASC399cse,tail_length,CC vs XC,CC,XC,CC: Control / Control,XC: CSE pre / Control,48,43,60,72,-12,0.901925281,0.901925281,ns,ns
+ASC399cse,olive_moment,CC vs XX,CC,XX,CC: Control / Control,XX: CSE pre / Acute CSE,48,15,12.39296836,6.156374254,6.236594105,0.031212971,0.093638912,*,ns
+ASC399cse,tail_dna_percent,CC vs XX,CC,XX,CC: Control / Control,XX: CSE pre / Acute CSE,48,15,36.33035975,16.78547869,19.54488107,0.019708125,0.0896884,*,ns
+ASC399cse,tail_length,CC vs XX,CC,XX,CC: Control / Control,XX: CSE pre / Acute CSE,48,15,60,27,33,0.020995349,0.115104923,*,ns
+ASC399cse,olive_moment,CX vs SC,CX,SC,CX: Control / Acute CSE,SC: SFN pre / Control,19,30,7.100161326,7.652946167,-0.552784841,0.372070794,0.507369265,ns,ns
+ASC399cse,tail_dna_percent,CX vs SC,CX,SC,CX: Control / Acute CSE,SC: SFN pre / Control,19,30,22.90374621,19.2645252,3.639221014,0.813452053,0.938598523,ns,ns
+ASC399cse,tail_length,CX vs SC,CX,SC,CX: Control / Acute CSE,SC: SFN pre / Control,19,30,38,46.5,-8.5,0.314478384,0.42883416,ns,ns
+ASC399cse,olive_moment,CX vs SX,CX,SX,CX: Control / Acute CSE,SX: SFN pre / Acute CSE,19,16,7.100161326,5.304451868,1.795709458,0.631125729,0.724737745,ns,ns
+ASC399cse,tail_dna_percent,CX vs SX,CX,SX,CX: Control / Acute CSE,SX: SFN pre / Acute CSE,19,16,22.90374621,17.20248023,5.701265988,0.456241826,0.570302282,ns,ns
+ASC399cse,tail_length,CX vs SX,CX,SX,CX: Control / Acute CSE,SX: SFN pre / Acute CSE,19,16,38,31,7,0.630982204,0.695693919,ns,ns
+ASC399cse,olive_moment,CX vs XC,CX,XC,CX: Control / Acute CSE,XC: CSE pre / Control,19,43,7.100161326,23.24768368,-16.14752236,0.018701956,0.093638912,*,ns
+ASC399cse,tail_dna_percent,CX vs XC,CX,XC,CX: Control / Acute CSE,XC: CSE pre / Control,19,43,22.90374621,48.40876184,-25.50501563,0.027897159,0.0896884,*,ns
+ASC399cse,tail_length,CX vs XC,CX,XC,CX: Control / Acute CSE,XC: CSE pre / Control,19,43,38,72,-34,0.030712738,0.115104923,*,ns
+ASC399cse,olive_moment,CX vs XX,CX,XX,CX: Control / Acute CSE,XX: CSE pre / Acute CSE,19,15,7.100161326,6.156374254,0.943787073,0.602878203,0.724737745,ns,ns
+ASC399cse,tail_dna_percent,CX vs XX,CX,XX,CX: Control / Acute CSE,XX: CSE pre / Acute CSE,19,15,22.90374621,16.78547869,6.118267525,0.445429538,0.570302282,ns,ns
+ASC399cse,tail_length,CX vs XX,CX,XX,CX: Control / Acute CSE,XX: CSE pre / Acute CSE,19,15,38,27,11,0.404881515,0.506101893,ns,ns
+ASC399cse,olive_moment,SC vs SX,SC,SX,SC: SFN pre / Control,SX: SFN pre / Acute CSE,30,16,7.652946167,5.304451868,2.348494299,0.169980904,0.318714194,ns,ns
+ASC399cse,tail_dna_percent,SC vs SX,SC,SX,SC: SFN pre / Control,SX: SFN pre / Acute CSE,30,16,19.2645252,17.20248023,2.062044974,0.326992632,0.544987719,ns,ns
+ASC399cse,tail_length,SC vs SX,SC,SX,SC: SFN pre / Control,SX: SFN pre / Acute CSE,30,16,46.5,31,15.5,0.278316963,0.417475445,ns,ns
+ASC399cse,olive_moment,SC vs XC,SC,XC,SC: SFN pre / Control,XC: CSE pre / Control,30,43,7.652946167,23.24768368,-15.59473752,0.071937598,0.154151996,ns,ns
+ASC399cse,tail_dna_percent,SC vs XC,SC,XC,SC: SFN pre / Control,XC: CSE pre / Control,30,43,19.2645252,48.40876184,-29.14423665,0.041854587,0.0896884,*,ns
+ASC399cse,tail_length,SC vs XC,SC,XC,SC: SFN pre / Control,XC: CSE pre / Control,30,43,46.5,72,-25.5,0.171301629,0.321190555,ns,ns
+ASC399cse,olive_moment,SC vs XX,SC,XX,SC: SFN pre / Control,XX: CSE pre / Acute CSE,30,15,7.652946167,6.156374254,1.496571913,0.214984905,0.358308175,ns,ns
+ASC399cse,tail_dna_percent,SC vs XX,SC,XX,SC: SFN pre / Control,XX: CSE pre / Acute CSE,30,15,19.2645252,16.78547869,2.479046511,0.366582209,0.549873314,ns,ns
+ASC399cse,tail_length,SC vs XX,SC,XX,SC: SFN pre / Control,XX: CSE pre / Acute CSE,30,15,46.5,27,19.5,0.151826122,0.321190555,ns,ns
+ASC399cse,olive_moment,SX vs XC,SX,XC,SX: SFN pre / Acute CSE,XC: CSE pre / Control,16,43,5.304451868,23.24768368,-17.94323181,0.017385347,0.093638912,*,ns
+ASC399cse,tail_dna_percent,SX vs XC,SX,XC,SX: SFN pre / Acute CSE,XC: CSE pre / Control,16,43,17.20248023,48.40876184,-31.20628162,0.023876776,0.0896884,*,ns
+ASC399cse,tail_length,SX vs XC,SX,XC,SX: SFN pre / Acute CSE,XC: CSE pre / Control,16,43,31,72,-41,0.046041969,0.115104923,*,ns
+ASC399cse,olive_moment,SX vs XX,SX,XX,SX: SFN pre / Acute CSE,XX: CSE pre / Acute CSE,16,15,5.304451868,6.156374254,-0.851922386,0.736876898,0.736876898,ns,ns
+ASC399cse,tail_dna_percent,SX vs XX,SX,XX,SX: SFN pre / Acute CSE,XX: CSE pre / Acute CSE,16,15,17.20248023,16.78547869,0.417001537,1,1,ns,ns
+ASC399cse,tail_length,SX vs XX,SX,XX,SX: SFN pre / Acute CSE,XX: CSE pre / Acute CSE,16,15,31,27,4,0.649314325,0.695693919,ns,ns
+ASC399cse,olive_moment,XC vs XX,XC,XX,XC: CSE pre / Control,XX: CSE pre / Acute CSE,43,15,23.24768368,6.156374254,17.09130943,0.025256282,0.093638912,*,ns
+ASC399cse,tail_dna_percent,XC vs XX,XC,XX,XC: CSE pre / Control,XX: CSE pre / Acute CSE,43,15,48.40876184,16.78547869,31.62328316,0.039409639,0.0896884,*,ns
+ASC399cse,tail_length,XC vs XX,XC,XX,XC: CSE pre / Control,XX: CSE pre / Acute CSE,43,15,72,27,45,0.042005421,0.115104923,*,ns

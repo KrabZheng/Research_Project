@@ -1,0 +1,3 @@
+base,Compound,unit,sample_id,IC50_sample,SE_sample,samplecse_id,IC50_sampleCSE,SE_sampleCSE,ratio,ratio_lwr,ratio_upr,p_value
+asc397,NA,NA,ASC397,NA,NA,ASC397cse,NA,NA,NA,NA,NA,NA
+asc399,NA,NA,ASC399,NA,NA,ASC399cse,NA,NA,NA,NA,NA,NA

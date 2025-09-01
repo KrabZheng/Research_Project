@@ -1,0 +1,9 @@
+Count_Children_Puncta_Count	Count_Nuclei	Count_Nuclei_555pos	Count_Nuclei_withDots	Count_Puncta	Count_Toobright_all	ImageNumber	Metadata_Conc	Metadata_Sample
+1299.0	2854.0	2371.0	722.0	1299.0	0.0	1	CC	9
+1090.0	4275.0	3349.0	693.0	1090.0	0.0	2	CX	9
+686.0	1425.0	1264.0	370.0	686.0	0.0	3	XC	9
+830.0	3314.0	2724.0	508.0	830.0	1.0	4	XX	9
+811.0	1370.0	1259.0	449.0	811.0	0.0	5	CC	9C
+999.0	2061.0	1995.0	539.0	999.0	2.0	6	CX	9C
+539.0	905.0	903.0	293.0	539.0	0.0	7	XC	9C
+418.0	678.0	677.0	237.0	418.0	0.0	8	XX	9C

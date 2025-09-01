@@ -1,0 +1,13 @@
+sample,condition_code,condition_factor,images,n_nuclei
+ASC399,CC,CC: Control / Control,3,68
+ASC399,CX,CX: Control / Acute CSE,3,101
+ASC399,SC,SC: SFN pre / Control,3,50
+ASC399,SX,SX: SFN pre / Acute CSE,3,52
+ASC399,XC,XC: CSE pre / Control,3,53
+ASC399,XX,XX: CSE pre / Acute CSE,3,53
+ASC399cse,CC,CC: Control / Control,3,48
+ASC399cse,CX,CX: Control / Acute CSE,3,19
+ASC399cse,SC,SC: SFN pre / Control,3,30
+ASC399cse,SX,SX: SFN pre / Acute CSE,3,16
+ASC399cse,XC,XC: CSE pre / Control,3,43
+ASC399cse,XX,XX: CSE pre / Acute CSE,3,15
